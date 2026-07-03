@@ -1,0 +1,8 @@
+{
+  "src": [
+    "pages/landing",
+    "pages/display",
+    "pages/DisplayPage",
+    "pages/FireStrategyPage"
+  ]
+}

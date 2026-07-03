@@ -1,0 +1,56 @@
+{
+  "app": {
+    "signingConfigs": [
+      {
+        "name": "default",
+        "type": "HarmonyOS",
+        "material": {
+          "certpath": "C:\\Users\\南方知我意\\.ohos\\config\\default_zhihui_3KTJECk6I4xI8cC4mnlJ6Q_bQXsfrAjrdSfKK1w7N5A=.cer",
+          "keyAlias": "debugKey",
+          "keyPassword": "0000001B43510B77679095AFA04295C5704DD926B76A934144E25BAE2517DF989F26F050344B27236F7AE9",
+          "profile": "C:\\Users\\南方知我意\\.ohos\\config\\default_zhihui_3KTJECk6I4xI8cC4mnlJ6Q_bQXsfrAjrdSfKK1w7N5A=.p7b",
+          "signAlg": "SHA256withECDSA",
+          "storeFile": "C:\\Users\\南方知我意\\.ohos\\config\\default_zhihui_3KTJECk6I4xI8cC4mnlJ6Q_bQXsfrAjrdSfKK1w7N5A=.p12",
+          "storePassword": "0000001B151D7723AAC4A8AA9596DA7740F57DBA5DCAD23E78A31D8F30417573493100E2BC61A60E0D5402"
+        }
+      }
+    ],
+    "products": [
+      {
+        "name": "default",
+        "signingConfig": "default",
+        "targetSdkVersion": "6.0.1(21)",
+        "compatibleSdkVersion": "6.0.1(21)",
+        "runtimeOS": "HarmonyOS",
+        "buildOption": {
+          "strictMode": {
+            "caseSensitiveCheck": true,
+            "useNormalizedOHMUrl": true
+          }
+        }
+      }
+    ],
+    "buildModeSet": [
+      {
+        "name": "debug",
+      },
+      {
+        "name": "release"
+      }
+    ]
+  },
+  "modules": [
+    {
+      "name": "entry",
+      "srcPath": "./entry",
+      "targets": [
+        {
+          "name": "default",
+          "applyToProducts": [
+            "default"
+          ]
+        }
+      ]
+    }
+  ]
+}
