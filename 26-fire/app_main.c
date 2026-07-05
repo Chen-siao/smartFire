@@ -31,6 +31,7 @@
 #include "FLAME/flame.h"
 #include "烟雾传感器/mq2.h"
 #include "CO2/co2.h"
+#include "voice/voice.h"
 
 #define WIFI_TASK_STACK_SIZE 0x2000
 #define DELAY_TIME_MS 1000  // 1秒检测一次
@@ -152,6 +153,7 @@ static void environment_sensor_init(void)
     flame_init();
     mq2_init();
     co2_init(9600);
+    voice_uart_init();
     printf("=== Sensor Init Done ===\r\n");
 }
 
@@ -174,7 +176,11 @@ static void app_main(void)
     osal_task *task2 = osal_kthread_create((osal_kthread_handler)environment_task, 0,
                                             "Environment_task", 0x1000);
     osal_kthread_set_priority(task2, 10);
+    osal_task *task3 = osal_kthread_create((osal_kthread_handler)voice_task, 0,
+                                            "VoiceTask", 0x1000);
+    osal_kthread_set_priority(task3, 12);
     osal_kthread_unlock();
 }
 
 app_run(app_main);
+
