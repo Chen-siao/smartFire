@@ -1,0 +1,138 @@
+<?xml version="1.0" encoding="UTF-8"?><!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Strict//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-strict.dtd"><html xmlns="http://www.w3.org/1999/xhtml" lang="zh"><head><meta http-equiv="Content-Type" content="text/html;charset=UTF-8"/><link rel="stylesheet" href="../jacoco-resources/report.css" type="text/css"/><link rel="shortcut icon" href="../jacoco-resources/report.gif" type="image/gif"/><title>AlarmCheckService.java</title><link rel="stylesheet" href="../jacoco-resources/prettify.css" type="text/css"/><script type="text/javascript" src="../jacoco-resources/prettify.js"></script></head><body onload="window['PR_TAB_WIDTH']=4;prettyPrint()"><div class="breadcrumb" id="breadcrumb"><span class="info"><a href="../jacoco-sessions.html" class="el_session">Sessions</a></span><a href="../index.html" class="el_report">kingbase-iot-web</a> &gt; <a href="index.source.html" class="el_package">com.example.kingbaseiot</a> &gt; <span class="el_source">AlarmCheckService.java</span></div><h1>AlarmCheckService.java</h1><pre class="source lang-java linenums">package com.example.kingbaseiot;
+
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+import org.springframework.jdbc.core.JdbcTemplate;
+import org.springframework.scheduling.annotation.Scheduled;
+import org.springframework.stereotype.Service;
+
+import java.math.BigDecimal;
+import java.sql.Timestamp;
+import java.time.LocalDateTime;
+import java.util.List;
+
+@Service
+public class AlarmCheckService {
+
+<span class="fc" id="L17">    private static final Logger log = LoggerFactory.getLogger(AlarmCheckService.class);</span>
+
+    private final JdbcTemplate jdbcTemplate;
+
+<span class="fc" id="L21">    public AlarmCheckService(JdbcTemplate jdbcTemplate) {</span>
+<span class="fc" id="L22">        this.jdbcTemplate = jdbcTemplate;</span>
+<span class="fc" id="L23">    }</span>
+
+    @Scheduled(fixedDelay = 10_000)
+    public void checkForAnomalies() {
+        // 查询最近 15 秒内的传感器数据
+<span class="fc" id="L28">        List&lt;SensorRecord&gt; recent = jdbcTemplate.query(&quot;&quot;&quot;</span>
+                SELECT id, device_id, temperature, humidity, co2, smoke, light,
+                       fire_type, alert_level, dist, confidence, alert_history, report_time
+                FROM iot_sensor_record
+                WHERE report_time &gt;= ?
+                ORDER BY id DESC
+                LIMIT 30
+                &quot;&quot;&quot;, (rs, rowNum) -&gt; {
+<span class="nc" id="L36">                    SensorRecord r = new SensorRecord();</span>
+<span class="nc" id="L37">                    r.setId(rs.getLong(&quot;id&quot;));</span>
+<span class="nc" id="L38">                    r.setDeviceId(rs.getString(&quot;device_id&quot;));</span>
+<span class="nc" id="L39">                    r.setTemperature(rs.getBigDecimal(&quot;temperature&quot;));</span>
+<span class="nc" id="L40">                    r.setHumidity(rs.getBigDecimal(&quot;humidity&quot;));</span>
+<span class="nc" id="L41">                    r.setCo2(rs.getBigDecimal(&quot;co2&quot;));</span>
+<span class="nc" id="L42">                    r.setSmoke(rs.getBigDecimal(&quot;smoke&quot;));</span>
+<span class="nc" id="L43">                    r.setLight(rs.getBigDecimal(&quot;light&quot;));</span>
+<span class="nc" id="L44">                    int fireType = rs.getInt(&quot;fire_type&quot;);</span>
+<span class="nc bnc" id="L45" title="All 2 branches missed.">                    if (!rs.wasNull()) r.setFireType(fireType);</span>
+<span class="nc" id="L46">                    int alertLevel = rs.getInt(&quot;alert_level&quot;);</span>
+<span class="nc bnc" id="L47" title="All 2 branches missed.">                    if (!rs.wasNull()) r.setAlertLevel(alertLevel);</span>
+<span class="nc" id="L48">                    r.setDist(rs.getBigDecimal(&quot;dist&quot;));</span>
+<span class="nc" id="L49">                    r.setConfidence(rs.getBigDecimal(&quot;confidence&quot;));</span>
+<span class="nc" id="L50">                    r.setAlertHistory(rs.getString(&quot;alert_history&quot;));</span>
+<span class="nc" id="L51">                    Timestamp ts = rs.getTimestamp(&quot;report_time&quot;);</span>
+<span class="nc bnc" id="L52" title="All 2 branches missed.">                    if (ts != null) r.setReportTime(ts.toLocalDateTime());</span>
+<span class="nc" id="L53">                    return r;</span>
+<span class="fc" id="L54">                }, Timestamp.valueOf(LocalDateTime.now().minusSeconds(15)));</span>
+
+<span class="fc" id="L56">        log.info(&quot;定时检测: 最近15秒共{}条传感器数据&quot;, recent.size());</span>
+<span class="fc bfc" id="L57" title="All 2 branches covered.">        if (recent.isEmpty()) return;</span>
+
+<span class="fc bfc" id="L59" title="All 2 branches covered.">        for (SensorRecord r : recent) {</span>
+<span class="fc" id="L60">            checkFireType(r);</span>
+<span class="fc" id="L61">            checkAlertLevel(r);</span>
+<span class="fc" id="L62">            checkSmoke(r);</span>
+<span class="fc" id="L63">            checkTemperature(r);</span>
+<span class="fc" id="L64">        }</span>
+<span class="fc" id="L65">    }</span>
+
+    // 火情类型 &gt; 0 说明检测到火情
+    private void checkFireType(SensorRecord r) {
+<span class="pc bpc" id="L69" title="1 of 4 branches missed.">        if (r.getFireType() == null || r.getFireType() &lt;= 0) return;</span>
+
+<span class="fc" id="L71">        String[] fireTypes = {&quot;&quot;, &quot;明火&quot;, &quot;阴燃&quot;, &quot;电气火灾&quot;};</span>
+<span class="pc bpc" id="L72" title="1 of 2 branches missed.">        String typeName = r.getFireType() &lt; fireTypes.length ? fireTypes[r.getFireType()] : &quot;未知火情(&quot; + r.getFireType() + &quot;)&quot;;</span>
+<span class="fc" id="L73">        String content = String.format(&quot;传感器检测到%s，距离约%d米，置信度%s&quot;,</span>
+                typeName,
+<span class="pc bpc" id="L75" title="1 of 2 branches missed.">                r.getDist() != null ? r.getDist().intValue() : 0,</span>
+<span class="pc bpc" id="L76" title="1 of 2 branches missed.">                r.getConfidence() != null ? r.getConfidence().toString() : &quot;未知&quot;);</span>
+
+<span class="fc" id="L78">        createAlarmIfNew(r.getDeviceId(), &quot;火情检测&quot;, 3, content);</span>
+<span class="fc" id="L79">    }</span>
+
+    // 传感器自身告警等级 &gt;= 2
+    private void checkAlertLevel(SensorRecord r) {
+<span class="pc bpc" id="L83" title="1 of 4 branches missed.">        if (r.getAlertLevel() == null || r.getAlertLevel() &lt; 2) return;</span>
+
+<span class="fc bfc" id="L85" title="All 2 branches covered.">        String levelName = r.getAlertLevel() == 2 ? &quot;中&quot; : &quot;高&quot;;</span>
+<span class="fc" id="L86">        String content = String.format(&quot;传感器上报%s等级告警，当前温度%s°C、湿度%s%%、烟雾%s&quot;,</span>
+                levelName,
+<span class="pc bpc" id="L88" title="1 of 2 branches missed.">                r.getTemperature() != null ? r.getTemperature().toString() : &quot;-&quot;,</span>
+<span class="pc bpc" id="L89" title="1 of 2 branches missed.">                r.getHumidity() != null ? r.getHumidity().toString() : &quot;-&quot;,</span>
+<span class="pc bpc" id="L90" title="1 of 2 branches missed.">                r.getSmoke() != null ? r.getSmoke().toString() : &quot;-&quot;);</span>
+
+<span class="fc" id="L92">        createAlarmIfNew(r.getDeviceId(), &quot;传感器告警&quot;, r.getAlertLevel(), content);</span>
+<span class="fc" id="L93">    }</span>
+
+    // 烟雾 &gt; 0
+    private void checkSmoke(SensorRecord r) {
+<span class="pc bpc" id="L97" title="1 of 4 branches missed.">        if (r.getSmoke() == null || r.getSmoke().compareTo(BigDecimal.ZERO) &lt;= 0) return;</span>
+
+<span class="fc" id="L99">        String content = String.format(&quot;检测到烟雾浓度异常：%s，当前温度%s°C&quot;,</span>
+<span class="fc" id="L100">                r.getSmoke().toString(),</span>
+<span class="pc bpc" id="L101" title="1 of 2 branches missed.">                r.getTemperature() != null ? r.getTemperature().toString() : &quot;-&quot;);</span>
+
+<span class="fc bfc" id="L103" title="All 2 branches covered.">        int level = r.getSmoke().compareTo(new BigDecimal(&quot;200&quot;)) &gt; 0 ? 3 : 2;</span>
+<span class="fc" id="L104">        createAlarmIfNew(r.getDeviceId(), &quot;烟雾异常&quot;, level, content);</span>
+<span class="fc" id="L105">    }</span>
+
+    // 温度 &gt; 50°C
+    private void checkTemperature(SensorRecord r) {
+<span class="pc bpc" id="L109" title="1 of 4 branches missed.">        if (r.getTemperature() == null || r.getTemperature().compareTo(new BigDecimal(&quot;50&quot;)) &lt;= 0) return;</span>
+
+<span class="fc" id="L111">        String content = String.format(&quot;温度异常偏高：%s°C，湿度%s%%&quot;,</span>
+<span class="fc" id="L112">                r.getTemperature().toString(),</span>
+<span class="pc bpc" id="L113" title="1 of 2 branches missed.">                r.getHumidity() != null ? r.getHumidity().toString() : &quot;-&quot;);</span>
+
+<span class="fc bfc" id="L115" title="All 2 branches covered.">        int level = r.getTemperature().compareTo(new BigDecimal(&quot;70&quot;)) &gt; 0 ? 3 : 2;</span>
+<span class="fc" id="L116">        createAlarmIfNew(r.getDeviceId(), &quot;温度过高&quot;, level, content);</span>
+<span class="fc" id="L117">    }</span>
+
+    // 防止重复报警：同一设备同一类型在 60 秒内不重复创建
+    private void createAlarmIfNew(String deviceId, String alarmType, int alarmLevel, String alarmContent) {
+<span class="fc" id="L121">        Integer count = jdbcTemplate.queryForObject(&quot;&quot;&quot;</span>
+                SELECT COUNT(*) FROM alarm_record
+                WHERE device_id = ? AND alarm_type = ? AND alarm_time &gt;= ?
+                &quot;&quot;&quot;, Integer.class,
+<span class="fc" id="L125">                deviceId, alarmType, Timestamp.valueOf(LocalDateTime.now().minusSeconds(60)));</span>
+
+<span class="pc bpc" id="L127" title="1 of 4 branches missed.">        if (count != null &amp;&amp; count &gt; 0) return;</span>
+
+<span class="fc" id="L129">        jdbcTemplate.update(&quot;&quot;&quot;</span>
+                INSERT INTO alarm_record(device_id, alarm_type, alarm_level, alarm_content, handle_status)
+                VALUES (?, ?, ?, ?, '未处理')
+<span class="fc" id="L132">                &quot;&quot;&quot;, deviceId, alarmType, alarmLevel, alarmContent);</span>
+
+<span class="fc" id="L134">        log.info(&quot;自动生成报警: device={}, type={}, level={}, content={}&quot;,</span>
+<span class="fc" id="L135">                deviceId, alarmType, alarmLevel, alarmContent);</span>
+<span class="fc" id="L136">    }</span>
+}
+</pre><div class="footer"><span class="right">Created with <a href="http://www.jacoco.org/jacoco">JaCoCo</a> 0.8.12.202403310830</span></div></body></html>

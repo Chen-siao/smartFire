@@ -1,0 +1,24 @@
+server:
+  port: 18080
+
+spring:
+  datasource:
+    # 如果 PostgreSQL 驱动可用，使用下面这个
+    url: jdbc:postgresql://localhost:54321/iot_db?charSet=UTF-8
+    username: system
+    password: 1234
+    driver-class-name: org.postgresql.Driver
+
+    # 如果改用金仓官方 JDBC 驱动，则改成：
+    # url: jdbc:kingbase8://localhost:54321/iot_db
+    # driver-class-name: com.kingbase8.Driver
+
+  sql:
+    init:
+      mode: always
+      encoding: UTF-8
+      schema-locations: classpath:schema.sql
+
+logging:
+  level:
+    com.example.kingbaseiot: info

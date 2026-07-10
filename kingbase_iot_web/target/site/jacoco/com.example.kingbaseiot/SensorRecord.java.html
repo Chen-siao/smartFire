@@ -1,0 +1,60 @@
+<?xml version="1.0" encoding="UTF-8"?><!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Strict//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-strict.dtd"><html xmlns="http://www.w3.org/1999/xhtml" lang="zh"><head><meta http-equiv="Content-Type" content="text/html;charset=UTF-8"/><link rel="stylesheet" href="../jacoco-resources/report.css" type="text/css"/><link rel="shortcut icon" href="../jacoco-resources/report.gif" type="image/gif"/><title>SensorRecord.java</title><link rel="stylesheet" href="../jacoco-resources/prettify.css" type="text/css"/><script type="text/javascript" src="../jacoco-resources/prettify.js"></script></head><body onload="window['PR_TAB_WIDTH']=4;prettyPrint()"><div class="breadcrumb" id="breadcrumb"><span class="info"><a href="../jacoco-sessions.html" class="el_session">Sessions</a></span><a href="../index.html" class="el_report">kingbase-iot-web</a> &gt; <a href="index.source.html" class="el_package">com.example.kingbaseiot</a> &gt; <span class="el_source">SensorRecord.java</span></div><h1>SensorRecord.java</h1><pre class="source lang-java linenums">package com.example.kingbaseiot;
+
+import java.math.BigDecimal;
+import java.time.LocalDateTime;
+
+<span class="fc" id="L6">public class SensorRecord {</span>
+    private Long id;
+    private String deviceId;
+    private BigDecimal temperature;
+    private BigDecimal humidity;
+    private BigDecimal co2;
+    private BigDecimal smoke;
+    private BigDecimal light;
+    private Integer fireType;
+    private Integer alertLevel;
+    private BigDecimal dist;
+    private BigDecimal confidence;
+    private String alertHistory;
+    private LocalDateTime reportTime;
+
+<span class="nc" id="L21">    public Long getId() { return id; }</span>
+<span class="fc" id="L22">    public void setId(Long id) { this.id = id; }</span>
+
+<span class="fc" id="L24">    public String getDeviceId() { return deviceId; }</span>
+<span class="fc" id="L25">    public void setDeviceId(String deviceId) { this.deviceId = deviceId; }</span>
+
+<span class="fc" id="L27">    public BigDecimal getTemperature() { return temperature; }</span>
+<span class="fc" id="L28">    public void setTemperature(BigDecimal temperature) { this.temperature = temperature; }</span>
+
+<span class="fc" id="L30">    public BigDecimal getHumidity() { return humidity; }</span>
+<span class="fc" id="L31">    public void setHumidity(BigDecimal humidity) { this.humidity = humidity; }</span>
+
+<span class="fc" id="L33">    public BigDecimal getCo2() { return co2; }</span>
+<span class="fc" id="L34">    public void setCo2(BigDecimal co2) { this.co2 = co2; }</span>
+
+<span class="fc" id="L36">    public BigDecimal getSmoke() { return smoke; }</span>
+<span class="fc" id="L37">    public void setSmoke(BigDecimal smoke) { this.smoke = smoke; }</span>
+
+<span class="fc" id="L39">    public BigDecimal getLight() { return light; }</span>
+<span class="fc" id="L40">    public void setLight(BigDecimal light) { this.light = light; }</span>
+
+<span class="fc" id="L42">    public Integer getFireType() { return fireType; }</span>
+<span class="fc" id="L43">    public void setFireType(Integer fireType) { this.fireType = fireType; }</span>
+
+<span class="fc" id="L45">    public Integer getAlertLevel() { return alertLevel; }</span>
+<span class="fc" id="L46">    public void setAlertLevel(Integer alertLevel) { this.alertLevel = alertLevel; }</span>
+
+<span class="fc" id="L48">    public BigDecimal getDist() { return dist; }</span>
+<span class="fc" id="L49">    public void setDist(BigDecimal dist) { this.dist = dist; }</span>
+
+<span class="fc" id="L51">    public BigDecimal getConfidence() { return confidence; }</span>
+<span class="fc" id="L52">    public void setConfidence(BigDecimal confidence) { this.confidence = confidence; }</span>
+
+<span class="fc" id="L54">    public String getAlertHistory() { return alertHistory; }</span>
+<span class="nc" id="L55">    public void setAlertHistory(String alertHistory) { this.alertHistory = alertHistory; }</span>
+
+<span class="nc" id="L57">    public LocalDateTime getReportTime() { return reportTime; }</span>
+<span class="fc" id="L58">    public void setReportTime(LocalDateTime reportTime) { this.reportTime = reportTime; }</span>
+}
+</pre><div class="footer"><span class="right">Created with <a href="http://www.jacoco.org/jacoco">JaCoCo</a> 0.8.12.202403310830</span></div></body></html>

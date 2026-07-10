@@ -1,0 +1,6 @@
+com\example\kingbaseiot\DeviceControllerTest.class
+com\example\kingbaseiot\AlarmRecordTest.class
+com\example\kingbaseiot\AlarmCheckServiceTest.class
+com\example\kingbaseiot\AlarmControllerTest.class
+com\example\kingbaseiot\DeviceInfoTest.class
+com\example\kingbaseiot\SensorControllerTest.class

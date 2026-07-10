@@ -1,0 +1,8 @@
+com\example\kingbaseiot\SensorRecord.class
+com\example\kingbaseiot\KingbaseIotApplication.class
+com\example\kingbaseiot\AlarmController.class
+com\example\kingbaseiot\AlarmCheckService.class
+com\example\kingbaseiot\DeviceInfo.class
+com\example\kingbaseiot\AlarmRecord.class
+com\example\kingbaseiot\SensorController.class
+com\example\kingbaseiot\DeviceController.class

@@ -1,0 +1,9 @@
+GROUP,PACKAGE,CLASS,INSTRUCTION_MISSED,INSTRUCTION_COVERED,BRANCH_MISSED,BRANCH_COVERED,LINE_MISSED,LINE_COVERED,COMPLEXITY_MISSED,COMPLEXITY_COVERED,METHOD_MISSED,METHOD_COVERED
+kingbase-iot-web,com.example.kingbaseiot,SensorController,89,209,8,6,18,31,6,7,1,5
+kingbase-iot-web,com.example.kingbaseiot,AlarmController,139,167,15,13,28,29,12,10,2,6
+kingbase-iot-web,com.example.kingbaseiot,KingbaseIotApplication,5,3,0,0,2,1,1,1,1,1
+kingbase-iot-web,com.example.kingbaseiot,SensorRecord,10,84,0,0,3,24,3,24,3,24
+kingbase-iot-web,com.example.kingbaseiot,DeviceController,42,142,4,6,9,25,4,7,1,5
+kingbase-iot-web,com.example.kingbaseiot,DeviceInfo,4,41,0,0,1,12,1,12,1,12
+kingbase-iot-web,com.example.kingbaseiot,AlarmCheckService,99,384,19,33,18,53,17,18,1,8
+kingbase-iot-web,com.example.kingbaseiot,AlarmRecord,0,59,0,0,0,17,0,17,0,17

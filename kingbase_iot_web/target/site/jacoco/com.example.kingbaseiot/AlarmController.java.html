@@ -1,0 +1,118 @@
+<?xml version="1.0" encoding="UTF-8"?><!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Strict//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-strict.dtd"><html xmlns="http://www.w3.org/1999/xhtml" lang="zh"><head><meta http-equiv="Content-Type" content="text/html;charset=UTF-8"/><link rel="stylesheet" href="../jacoco-resources/report.css" type="text/css"/><link rel="shortcut icon" href="../jacoco-resources/report.gif" type="image/gif"/><title>AlarmController.java</title><link rel="stylesheet" href="../jacoco-resources/prettify.css" type="text/css"/><script type="text/javascript" src="../jacoco-resources/prettify.js"></script></head><body onload="window['PR_TAB_WIDTH']=4;prettyPrint()"><div class="breadcrumb" id="breadcrumb"><span class="info"><a href="../jacoco-sessions.html" class="el_session">Sessions</a></span><a href="../index.html" class="el_report">kingbase-iot-web</a> &gt; <a href="index.source.html" class="el_package">com.example.kingbaseiot</a> &gt; <span class="el_source">AlarmController.java</span></div><h1>AlarmController.java</h1><pre class="source lang-java linenums">package com.example.kingbaseiot;
+
+import org.springframework.jdbc.core.JdbcTemplate;
+import org.springframework.web.bind.annotation.*;
+
+import java.sql.Timestamp;
+import java.util.ArrayList;
+import java.util.List;
+
+@RestController
+@RequestMapping(&quot;/api/alarms&quot;)
+public class AlarmController {
+    private final JdbcTemplate jdbcTemplate;
+
+<span class="fc" id="L15">    public AlarmController(JdbcTemplate jdbcTemplate) {</span>
+<span class="fc" id="L16">        this.jdbcTemplate = jdbcTemplate;</span>
+<span class="fc" id="L17">    }</span>
+
+    @GetMapping(&quot;/{id}&quot;)
+    public AlarmRecord getById(@PathVariable Long id) {
+<span class="fc" id="L21">        List&lt;AlarmRecord&gt; list = jdbcTemplate.query(&quot;&quot;&quot;</span>
+                SELECT id, device_id, alarm_type, alarm_level, alarm_content,
+                       handle_status, handle_remark, alarm_time
+                FROM alarm_record
+                WHERE id = ?
+                &quot;&quot;&quot;, (rs, rowNum) -&gt; {
+<span class="nc" id="L27">            AlarmRecord a = new AlarmRecord();</span>
+<span class="nc" id="L28">            a.setId(rs.getLong(&quot;id&quot;));</span>
+<span class="nc" id="L29">            a.setDeviceId(rs.getString(&quot;device_id&quot;));</span>
+<span class="nc" id="L30">            a.setAlarmType(rs.getString(&quot;alarm_type&quot;));</span>
+<span class="nc" id="L31">            int level = rs.getInt(&quot;alarm_level&quot;);</span>
+<span class="nc bnc" id="L32" title="All 2 branches missed.">            if (!rs.wasNull()) a.setAlarmLevel(level);</span>
+<span class="nc" id="L33">            a.setAlarmContent(rs.getString(&quot;alarm_content&quot;));</span>
+<span class="nc" id="L34">            a.setHandleStatus(rs.getString(&quot;handle_status&quot;));</span>
+<span class="nc" id="L35">            a.setHandleRemark(rs.getString(&quot;handle_remark&quot;));</span>
+<span class="nc" id="L36">            Timestamp ts = rs.getTimestamp(&quot;alarm_time&quot;);</span>
+<span class="nc bnc" id="L37" title="All 2 branches missed.">            if (ts != null) a.setAlarmTime(ts.toLocalDateTime());</span>
+<span class="nc" id="L38">            return a;</span>
+        }, id);
+<span class="pc bpc" id="L40" title="1 of 2 branches missed.">        return list.isEmpty() ? null : list.get(0);</span>
+    }
+
+    @GetMapping
+    public List&lt;AlarmRecord&gt; list(
+            @RequestParam(required = false) String deviceId,
+            @RequestParam(required = false) String alarmType,
+            @RequestParam(required = false) String handleStatus,
+            @RequestParam(required = false) String keyword) {
+<span class="fc" id="L49">        StringBuilder sql = new StringBuilder(&quot;&quot;&quot;</span>
+                SELECT id, device_id, alarm_type, alarm_level, alarm_content,
+                       handle_status, handle_remark, alarm_time
+                FROM alarm_record WHERE 1=1
+                &quot;&quot;&quot;);
+<span class="fc" id="L54">        List&lt;Object&gt; params = new ArrayList&lt;&gt;();</span>
+
+<span class="pc bpc" id="L56" title="1 of 4 branches missed.">        if (deviceId != null &amp;&amp; !deviceId.isBlank()) {</span>
+<span class="fc" id="L57">            sql.append(&quot; AND device_id ILIKE ?&quot;);</span>
+<span class="fc" id="L58">            params.add(&quot;%&quot; + deviceId.trim() + &quot;%&quot;);</span>
+        }
+<span class="pc bpc" id="L60" title="1 of 4 branches missed.">        if (alarmType != null &amp;&amp; !alarmType.isBlank()) {</span>
+<span class="fc" id="L61">            sql.append(&quot; AND alarm_type ILIKE ?&quot;);</span>
+<span class="fc" id="L62">            params.add(&quot;%&quot; + alarmType.trim() + &quot;%&quot;);</span>
+        }
+<span class="pc bpc" id="L64" title="1 of 4 branches missed.">        if (handleStatus != null &amp;&amp; !handleStatus.isBlank()) {</span>
+<span class="fc" id="L65">            sql.append(&quot; AND handle_status = ?&quot;);</span>
+<span class="fc" id="L66">            params.add(handleStatus.trim());</span>
+        }
+<span class="pc bpc" id="L68" title="3 of 4 branches missed.">        if (keyword != null &amp;&amp; !keyword.isBlank()) {</span>
+<span class="nc" id="L69">            sql.append(&quot; AND (alarm_content ILIKE ? OR alarm_type ILIKE ?)&quot;);</span>
+<span class="nc" id="L70">            String like = &quot;%&quot; + keyword.trim() + &quot;%&quot;;</span>
+<span class="nc" id="L71">            params.add(like);</span>
+<span class="nc" id="L72">            params.add(like);</span>
+        }
+<span class="fc" id="L74">        sql.append(&quot; ORDER BY id DESC&quot;);</span>
+
+<span class="fc" id="L76">        return jdbcTemplate.query(sql.toString(), (rs, rowNum) -&gt; {</span>
+<span class="nc" id="L77">            AlarmRecord a = new AlarmRecord();</span>
+<span class="nc" id="L78">            a.setId(rs.getLong(&quot;id&quot;));</span>
+<span class="nc" id="L79">            a.setDeviceId(rs.getString(&quot;device_id&quot;));</span>
+<span class="nc" id="L80">            a.setAlarmType(rs.getString(&quot;alarm_type&quot;));</span>
+<span class="nc" id="L81">            int level = rs.getInt(&quot;alarm_level&quot;);</span>
+<span class="nc bnc" id="L82" title="All 2 branches missed.">            if (!rs.wasNull()) a.setAlarmLevel(level);</span>
+<span class="nc" id="L83">            a.setAlarmContent(rs.getString(&quot;alarm_content&quot;));</span>
+<span class="nc" id="L84">            a.setHandleStatus(rs.getString(&quot;handle_status&quot;));</span>
+<span class="nc" id="L85">            a.setHandleRemark(rs.getString(&quot;handle_remark&quot;));</span>
+<span class="nc" id="L86">            Timestamp ts = rs.getTimestamp(&quot;alarm_time&quot;);</span>
+<span class="nc bnc" id="L87" title="All 2 branches missed.">            if (ts != null) a.setAlarmTime(ts.toLocalDateTime());</span>
+<span class="nc" id="L88">            return a;</span>
+<span class="fc" id="L89">        }, params.toArray());</span>
+    }
+
+    @PostMapping
+    public String add(@RequestBody AlarmRecord alarm) {
+<span class="fc" id="L94">        jdbcTemplate.update(&quot;&quot;&quot;</span>
+                INSERT INTO alarm_record(device_id, alarm_type, alarm_level, alarm_content, handle_status)
+                VALUES (?, ?, ?, ?, ?)
+<span class="fc" id="L97">                &quot;&quot;&quot;, alarm.getDeviceId(), alarm.getAlarmType(), alarm.getAlarmLevel(),</span>
+<span class="fc bfc" id="L98" title="All 2 branches covered.">                alarm.getAlarmContent(), alarm.getHandleStatus() == null ? &quot;未处理&quot; : alarm.getHandleStatus());</span>
+<span class="fc" id="L99">        return &quot;新增报警成功&quot;;</span>
+    }
+
+    @PutMapping(&quot;/{id}&quot;)
+    public String update(@PathVariable Long id, @RequestBody AlarmRecord alarm) {
+<span class="fc" id="L104">        jdbcTemplate.update(&quot;&quot;&quot;</span>
+                UPDATE alarm_record
+                SET handle_status = ?, handle_remark = ?
+                WHERE id = ?
+<span class="fc" id="L108">                &quot;&quot;&quot;, alarm.getHandleStatus(), alarm.getHandleRemark(), id);</span>
+<span class="fc" id="L109">        return &quot;修改报警处理状态成功&quot;;</span>
+    }
+
+    @DeleteMapping(&quot;/{id}&quot;)
+    public String delete(@PathVariable Long id) {
+<span class="fc" id="L114">        jdbcTemplate.update(&quot;DELETE FROM alarm_record WHERE id = ?&quot;, id);</span>
+<span class="fc" id="L115">        return &quot;删除报警成功&quot;;</span>
+    }
+}
+</pre><div class="footer"><span class="right">Created with <a href="http://www.jacoco.org/jacoco">JaCoCo</a> 0.8.12.202403310830</span></div></body></html>

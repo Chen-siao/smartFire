@@ -1,0 +1,80 @@
+<?xml version="1.0" encoding="UTF-8"?><!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Strict//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-strict.dtd"><html xmlns="http://www.w3.org/1999/xhtml" lang="zh"><head><meta http-equiv="Content-Type" content="text/html;charset=UTF-8"/><link rel="stylesheet" href="../jacoco-resources/report.css" type="text/css"/><link rel="shortcut icon" href="../jacoco-resources/report.gif" type="image/gif"/><title>DeviceController.java</title><link rel="stylesheet" href="../jacoco-resources/prettify.css" type="text/css"/><script type="text/javascript" src="../jacoco-resources/prettify.js"></script></head><body onload="window['PR_TAB_WIDTH']=4;prettyPrint()"><div class="breadcrumb" id="breadcrumb"><span class="info"><a href="../jacoco-sessions.html" class="el_session">Sessions</a></span><a href="../index.html" class="el_report">kingbase-iot-web</a> &gt; <a href="index.source.html" class="el_package">com.example.kingbaseiot</a> &gt; <span class="el_source">DeviceController.java</span></div><h1>DeviceController.java</h1><pre class="source lang-java linenums">package com.example.kingbaseiot;
+
+import org.springframework.jdbc.core.JdbcTemplate;
+import org.springframework.web.bind.annotation.*;
+
+import java.sql.Timestamp;
+import java.util.ArrayList;
+import java.util.List;
+
+@RestController
+@RequestMapping(&quot;/api/devices&quot;)
+public class DeviceController {
+    private final JdbcTemplate jdbcTemplate;
+
+<span class="fc" id="L15">    public DeviceController(JdbcTemplate jdbcTemplate) {</span>
+<span class="fc" id="L16">        this.jdbcTemplate = jdbcTemplate;</span>
+<span class="fc" id="L17">    }</span>
+
+    @GetMapping
+    public List&lt;DeviceInfo&gt; list(
+            @RequestParam(required = false) String keyword,
+            @RequestParam(required = false) String status) {
+<span class="fc" id="L23">        StringBuilder sql = new StringBuilder(&quot;&quot;&quot;</span>
+                SELECT id, device_id, device_name, location, status, create_time
+                FROM device_info WHERE 1=1
+                &quot;&quot;&quot;);
+<span class="fc" id="L27">        List&lt;Object&gt; params = new ArrayList&lt;&gt;();</span>
+
+<span class="pc bpc" id="L29" title="1 of 4 branches missed.">        if (keyword != null &amp;&amp; !keyword.isBlank()) {</span>
+<span class="fc" id="L30">            sql.append(&quot; AND (device_id ILIKE ? OR device_name ILIKE ? OR location ILIKE ?)&quot;);</span>
+<span class="fc" id="L31">            String like = &quot;%&quot; + keyword.trim() + &quot;%&quot;;</span>
+<span class="fc" id="L32">            params.add(like);</span>
+<span class="fc" id="L33">            params.add(like);</span>
+<span class="fc" id="L34">            params.add(like);</span>
+        }
+<span class="pc bpc" id="L36" title="1 of 4 branches missed.">        if (status != null &amp;&amp; !status.isBlank()) {</span>
+<span class="fc" id="L37">            sql.append(&quot; AND status = ?&quot;);</span>
+<span class="fc" id="L38">            params.add(status.trim());</span>
+        }
+<span class="fc" id="L40">        sql.append(&quot; ORDER BY id DESC&quot;);</span>
+
+<span class="fc" id="L42">        return jdbcTemplate.query(sql.toString(), (rs, rowNum) -&gt; {</span>
+<span class="nc" id="L43">            DeviceInfo d = new DeviceInfo();</span>
+<span class="nc" id="L44">            d.setId(rs.getLong(&quot;id&quot;));</span>
+<span class="nc" id="L45">            d.setDeviceId(rs.getString(&quot;device_id&quot;));</span>
+<span class="nc" id="L46">            d.setDeviceName(rs.getString(&quot;device_name&quot;));</span>
+<span class="nc" id="L47">            d.setLocation(rs.getString(&quot;location&quot;));</span>
+<span class="nc" id="L48">            d.setStatus(rs.getString(&quot;status&quot;));</span>
+<span class="nc" id="L49">            Timestamp ts = rs.getTimestamp(&quot;create_time&quot;);</span>
+<span class="nc bnc" id="L50" title="All 2 branches missed.">            if (ts != null) d.setCreateTime(ts.toLocalDateTime());</span>
+<span class="nc" id="L51">            return d;</span>
+<span class="fc" id="L52">        }, params.toArray());</span>
+    }
+
+    @PostMapping
+    public String add(@RequestBody DeviceInfo device) {
+<span class="fc" id="L57">        jdbcTemplate.update(&quot;&quot;&quot;</span>
+                INSERT INTO device_info(device_id, device_name, location, status)
+                VALUES (?, ?, ?, ?)
+<span class="fc" id="L60">                &quot;&quot;&quot;, device.getDeviceId(), device.getDeviceName(), device.getLocation(), device.getStatus());</span>
+<span class="fc" id="L61">        return &quot;新增设备成功&quot;;</span>
+    }
+
+    @PutMapping(&quot;/{id}&quot;)
+    public String update(@PathVariable Long id, @RequestBody DeviceInfo device) {
+<span class="fc" id="L66">        jdbcTemplate.update(&quot;&quot;&quot;</span>
+                UPDATE device_info
+                SET device_id = ?, device_name = ?, location = ?, status = ?
+                WHERE id = ?
+<span class="fc" id="L70">                &quot;&quot;&quot;, device.getDeviceId(), device.getDeviceName(), device.getLocation(), device.getStatus(), id);</span>
+<span class="fc" id="L71">        return &quot;修改设备成功&quot;;</span>
+    }
+
+    @DeleteMapping(&quot;/{id}&quot;)
+    public String delete(@PathVariable Long id) {
+<span class="fc" id="L76">        jdbcTemplate.update(&quot;DELETE FROM device_info WHERE id = ?&quot;, id);</span>
+<span class="fc" id="L77">        return &quot;删除设备成功&quot;;</span>
+    }
+}
+</pre><div class="footer"><span class="right">Created with <a href="http://www.jacoco.org/jacoco">JaCoCo</a> 0.8.12.202403310830</span></div></body></html>

@@ -1,0 +1,479 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <title>森防慧眼 - 金仓数据库应用</title>
+    <style>
+        body { margin: 0; font-family: "Microsoft YaHei", Arial, sans-serif; background: #f5f7fb; color: #1f2937; }
+        header { background: linear-gradient(135deg, #0f766e, #2563eb); color: white; padding: 24px 36px; }
+        header h1 { margin: 0 0 8px; font-size: 30px; }
+        header p { margin: 0; opacity: .9; }
+        main { padding: 24px 36px; }
+        .cards { display: grid; grid-template-columns: repeat(3, 1fr); gap: 16px; margin-bottom: 20px; }
+        .card { background: white; border-radius: 12px; padding: 20px; box-shadow: 0 4px 14px rgba(0,0,0,.06); }
+        .card h3 { margin: 0 0 8px; color: #64748b; font-size: 15px; }
+        .card .num { font-size: 28px; font-weight: bold; color: #0f766e; }
+        section { background: white; border-radius: 12px; padding: 20px; margin-bottom: 20px; box-shadow: 0 4px 14px rgba(0,0,0,.06); }
+        h2 { margin: 0 0 16px; font-size: 21px; }
+        table { width: 100%; border-collapse: collapse; font-size: 14px; }
+        th, td { border-bottom: 1px solid #e5e7eb; padding: 10px 8px; text-align: left; }
+        th { background: #f8fafc; color: #475569; }
+        input, select { padding: 8px; border: 1px solid #cbd5e1; border-radius: 6px; margin: 4px; }
+        button { border: 0; border-radius: 6px; padding: 8px 12px; cursor: pointer; margin: 2px; }
+        .primary { background: #2563eb; color: white; }
+        .danger { background: #ef4444; color: white; }
+        .success { background: #0f766e; color: white; }
+        .gray { background: #e2e8f0; }
+        .form-row { display: flex; flex-wrap: wrap; align-items: center; margin-bottom: 12px; }
+        .tag { display: inline-block; padding: 4px 8px; border-radius: 999px; background: #dcfce7; color: #166534; font-size: 12px; }
+        .warn { background: #fee2e2; color: #991b1b; }
+
+        /* 弹窗 */
+        .modal-overlay {
+            display: none;
+            position: fixed; top: 0; left: 0; width: 100%; height: 100%;
+            background: rgba(0,0,0,.45); z-index: 1000;
+            justify-content: center; align-items: center;
+        }
+        .modal-overlay.active { display: flex; }
+        .modal {
+            background: white; border-radius: 16px; padding: 28px 32px;
+            width: 480px; max-width: 90vw; box-shadow: 0 20px 60px rgba(0,0,0,.2);
+            animation: modalIn .25s ease;
+        }
+        @keyframes modalIn {
+            from { opacity: 0; transform: translateY(-30px) scale(.95); }
+            to   { opacity: 1; transform: translateY(0) scale(1); }
+        }
+        .modal h2 { margin: 0 0 20px; font-size: 22px; }
+        .modal .field { margin-bottom: 14px; }
+        .modal .field label { display: block; font-size: 14px; color: #475569; margin-bottom: 4px; font-weight: 600; }
+        .modal .field input, .modal .field select { width: 100%; box-sizing: border-box; padding: 10px 12px; font-size: 15px; margin: 0; }
+        .modal .actions { display: flex; justify-content: flex-end; gap: 10px; margin-top: 24px; }
+        .modal .actions button { padding: 10px 24px; font-size: 15px; }
+    </style>
+</head>
+<body>
+<header>
+    <h1>森防慧眼：基于金仓数据库的森林火灾预警系统</h1>
+    <p>设备数据通过 MQTT 接入华为云 IoTDA，再由 FunctionGraph 写入金仓数据库。</p>
+</header>
+
+<main>
+    <div class="cards">
+        <div class="card"><h3>设备管理</h3><div class="num" id="deviceCount">0</div></div>
+        <div class="card"><h3>最近监测记录</h3><div class="num" id="sensorCount">0</div></div>
+        <div class="card"><h3>报警记录</h3><div class="num" id="alarmCount">0</div></div>
+    </div>
+
+    <!-- ===== 设备 ===== -->
+    <section>
+        <h2>一、设备信息管理</h2>
+        <div class="form-row">
+            <input id="devSearch" placeholder="搜索设备ID/名称/位置" style="width:200px" oninput="loadDevices()">
+            <select id="devStatusFilter" onchange="loadDevices()">
+                <option value="">全部状态</option>
+                <option value="在线">在线</option>
+                <option value="离线">离线</option>
+                <option value="维护中">维护中</option>
+            </select>
+            <button class="primary" onclick="openDeviceModal()">新增设备</button>
+            <button class="gray" onclick="loadAll()">刷新</button>
+        </div>
+        <table>
+            <thead><tr><th>设备ID</th><th>设备名称</th><th>位置</th><th>状态</th><th>操作</th></tr></thead>
+            <tbody id="deviceTable"></tbody>
+        </table>
+    </section>
+
+    <!-- ===== 传感器 ===== -->
+    <section>
+        <h2>二、实时监测数据查询</h2>
+        <div class="form-row">
+            <input id="sensorDevIdSearch" placeholder="按设备ID搜索" style="width:180px" oninput="loadSensors()">
+            <select id="sensorLimit" onchange="loadSensors()">
+                <option value="50">最近50条</option>
+                <option value="100">最近100条</option>
+                <option value="200">最近200条</option>
+            </select>
+            <button class="success" onclick="openSensorModal()">新增测试数据</button>
+            <button class="gray" onclick="loadSensors()">刷新</button>
+        </div>
+        <table>
+            <thead>
+            <tr>
+                <th>设备ID</th><th>温度</th><th>湿度</th><th>CO2</th><th>烟雾</th>
+                <th>光照</th><th>火情</th><th>报警</th><th>距离</th><th>上报时间</th><th>操作</th>
+            </tr>
+            </thead>
+            <tbody id="sensorTable"></tbody>
+        </table>
+    </section>
+
+    <!-- ===== 报警 ===== -->
+    <section>
+        <h2>三、报警记录管理</h2>
+        <div class="form-row">
+            <input id="alarmDevIdSearch" placeholder="按设备ID搜索" style="width:150px" oninput="loadAlarms()">
+            <input id="alarmTypeSearch" placeholder="报警类型" style="width:130px" oninput="loadAlarms()">
+            <select id="alarmStatusFilter" onchange="loadAlarms()">
+                <option value="">全部状态</option>
+                <option value="未处理">未处理</option>
+                <option value="已处理">已处理</option>
+            </select>
+            <button class="success" onclick="openAlarmModal()">新增报警</button>
+            <button class="gray" onclick="loadAlarms()">刷新</button>
+        </div>
+        <table>
+            <thead><tr><th>设备ID</th><th>类型</th><th>等级</th><th>内容</th><th>处理状态</th><th>备注</th><th>报警时间</th><th>操作</th></tr></thead>
+            <tbody id="alarmTable"></tbody>
+        </table>
+    </section>
+</main>
+
+<!-- ==================== 设备弹窗 ==================== -->
+<div class="modal-overlay" id="deviceModalOverlay">
+    <div class="modal">
+        <h2 id="deviceModalTitle">新增设备</h2>
+        <input type="hidden" id="deviceEditId">
+        <div class="field"><label>设备ID</label><input id="dDeviceId" placeholder="如 SF001、BJ002"></div>
+        <div class="field"><label>设备名称</label><input id="dDeviceName" placeholder="如 1号传感器"></div>
+        <div class="field"><label>安装位置</label><input id="dLocation" placeholder="如 A区-北坡-01"></div>
+        <div class="field"><label>状态</label>
+            <select id="dStatus"><option value="在线">在线</option><option value="离线">离线</option><option value="维护中">维护中</option></select>
+        </div>
+        <div class="actions">
+            <button class="gray" onclick="closeDeviceModal()">取消</button>
+            <button class="primary" id="deviceModalSubmitBtn" onclick="submitDevice()">确认新增</button>
+        </div>
+    </div>
+</div>
+
+<!-- ==================== 传感器弹窗 ==================== -->
+<div class="modal-overlay" id="sensorModalOverlay">
+    <div class="modal">
+        <h2 id="sensorModalTitle">新增测试数据</h2>
+        <input type="hidden" id="sensorEditId">
+        <div class="field"><label>设备ID</label><input id="sDeviceId" placeholder="如 SF001"></div>
+        <div class="field"><label>温度 (°C)</label><input id="sTemperature" placeholder="如 27.5" type="number" step="0.01"></div>
+        <div class="field"><label>湿度 (%)</label><input id="sHumidity" placeholder="如 60" type="number" step="0.01"></div>
+        <div class="field"><label>CO2</label><input id="sCo2" placeholder="如 140" type="number" step="0.01"></div>
+        <div class="field"><label>烟雾</label><input id="sSmoke" placeholder="如 0" type="number" step="0.01"></div>
+        <div class="field"><label>光照</label><input id="sLight" placeholder="如 60" type="number" step="0.01"></div>
+        <div class="field"><label>火情类型</label>
+            <select id="sFireType"><option value="0">无火情</option><option value="1">明火</option><option value="2">阴燃</option><option value="3">电气火灾</option></select>
+        </div>
+        <div class="field"><label>报警等级</label>
+            <select id="sAlertLevel"><option value="1">1 - 低</option><option value="2">2 - 中</option><option value="3">3 - 高</option></select>
+        </div>
+        <div class="field"><label>距离 (米)</label><input id="sDist" placeholder="如 150" type="number" step="0.01"></div>
+        <div class="field"><label>置信度</label><input id="sConfidence" placeholder="如 0.9" type="number" step="0.01"></div>
+        <div class="actions">
+            <button class="gray" onclick="closeSensorModal()">取消</button>
+            <button class="primary" id="sensorModalSubmitBtn" onclick="submitSensor()">确认新增</button>
+        </div>
+    </div>
+</div>
+
+<!-- ==================== 报警弹窗 ==================== -->
+<div class="modal-overlay" id="alarmModalOverlay">
+    <div class="modal">
+        <h2 id="alarmModalTitle">新增报警</h2>
+        <input type="hidden" id="alarmEditId">
+        <div id="alarmAddFields">
+            <div class="field"><label>设备ID</label><input id="aDeviceId" placeholder="如 SF001"></div>
+            <div class="field"><label>报警类型</label><input id="aAlarmType" placeholder="如 烟雾异常、温度过高"></div>
+            <div class="field"><label>报警等级</label>
+                <select id="aAlarmLevel"><option value="1">1 - 低</option><option value="2">2 - 中</option><option value="3">3 - 高</option></select>
+            </div>
+            <div class="field"><label>报警内容</label><input id="aAlarmContent" placeholder="如 检测到烟雾浓度超标"></div>
+        </div>
+        <div id="alarmHandleFields" style="display:none">
+            <div class="field"><label>处理状态</label>
+                <select id="aHandleStatus"><option value="未处理">未处理</option><option value="已处理">已处理</option></select>
+            </div>
+            <div class="field"><label>处理备注</label><input id="aHandleRemark" placeholder="如 已确认，现场无火情"></div>
+        </div>
+        <div class="actions">
+            <button class="gray" onclick="closeAlarmModal()">取消</button>
+            <button class="primary" id="alarmModalSubmitBtn" onclick="submitAlarm()">确认新增</button>
+        </div>
+    </div>
+</div>
+
+<script>
+// ===================== 数据缓存（按ID存，避免乱码破坏onclick） =====================
+const deviceCache = {};
+const sensorCache = {};
+const alarmCache  = {};
+
+async function api(url, options = {}) {
+    const res = await fetch(url, {
+        headers: { "Content-Type": "application/json" },
+        ...options
+    });
+    if (!res.ok) {
+        const text = await res.text();
+        throw new Error(text);
+    }
+    const type = res.headers.get("content-type") || "";
+    return type.includes("application/json") ? res.json() : res.text();
+}
+
+function show(v) {
+    return v === null || v === undefined ? "" : v;
+}
+
+// ===================== 设备弹窗 =====================
+function openDeviceModal(id) {
+    const overlay = document.getElementById("deviceModalOverlay");
+    const dev = id ? deviceCache[id] : null;
+    if (dev) {
+        document.getElementById("deviceModalTitle").innerText = "编辑设备";
+        document.getElementById("deviceModalSubmitBtn").innerText = "保存修改";
+        document.getElementById("deviceEditId").value = dev.id;
+        document.getElementById("dDeviceId").value = dev.deviceId || "";
+        document.getElementById("dDeviceName").value = dev.deviceName || "";
+        document.getElementById("dLocation").value = dev.location || "";
+        document.getElementById("dStatus").value = dev.status || "在线";
+    } else {
+        document.getElementById("deviceModalTitle").innerText = "新增设备";
+        document.getElementById("deviceModalSubmitBtn").innerText = "确认新增";
+        document.getElementById("deviceEditId").value = "";
+        document.getElementById("dDeviceId").value = "";
+        document.getElementById("dDeviceName").value = "";
+        document.getElementById("dLocation").value = "";
+        document.getElementById("dStatus").value = "在线";
+    }
+    overlay.classList.add("active");
+}
+function closeDeviceModal() { document.getElementById("deviceModalOverlay").classList.remove("active"); }
+async function submitDevice() {
+    const editId = document.getElementById("deviceEditId").value;
+    const payload = {
+        deviceId: document.getElementById("dDeviceId").value.trim(),
+        deviceName: document.getElementById("dDeviceName").value.trim(),
+        location: document.getElementById("dLocation").value.trim(),
+        status: document.getElementById("dStatus").value
+    };
+    if (!payload.deviceId) { alert("请输入设备ID"); return; }
+    if (editId) {
+        await api(`/api/devices/${editId}`, { method: "PUT", body: JSON.stringify(payload) });
+    } else {
+        await api("/api/devices", { method: "POST", body: JSON.stringify(payload) });
+    }
+    closeDeviceModal();
+    await loadDevices();
+}
+document.getElementById("deviceModalOverlay").addEventListener("click", function(e) { if (e.target === this) closeDeviceModal(); });
+
+// ===================== 传感器弹窗 =====================
+function openSensorModal(id) {
+    const overlay = document.getElementById("sensorModalOverlay");
+    const rec = id ? sensorCache[id] : null;
+    if (rec) {
+        document.getElementById("sensorModalTitle").innerText = "编辑传感器数据";
+        document.getElementById("sensorModalSubmitBtn").innerText = "保存修改";
+        document.getElementById("sensorEditId").value = rec.id;
+        document.getElementById("sDeviceId").value = rec.deviceId || "";
+        document.getElementById("sTemperature").value = show(rec.temperature);
+        document.getElementById("sHumidity").value = show(rec.humidity);
+        document.getElementById("sCo2").value = show(rec.co2);
+        document.getElementById("sSmoke").value = show(rec.smoke);
+        document.getElementById("sLight").value = show(rec.light);
+        document.getElementById("sFireType").value = rec.fireType != null ? rec.fireType : 0;
+        document.getElementById("sAlertLevel").value = rec.alertLevel != null ? rec.alertLevel : 1;
+        document.getElementById("sDist").value = show(rec.dist);
+        document.getElementById("sConfidence").value = show(rec.confidence);
+    } else {
+        document.getElementById("sensorModalTitle").innerText = "新增测试数据";
+        document.getElementById("sensorModalSubmitBtn").innerText = "确认新增";
+        document.getElementById("sensorEditId").value = "";
+        ["sDeviceId","sTemperature","sHumidity","sCo2","sSmoke","sLight","sDist","sConfidence"].forEach(f => document.getElementById(f).value = "");
+        document.getElementById("sFireType").value = "0";
+        document.getElementById("sAlertLevel").value = "1";
+    }
+    overlay.classList.add("active");
+}
+function closeSensorModal() { document.getElementById("sensorModalOverlay").classList.remove("active"); }
+async function submitSensor() {
+    const editId = document.getElementById("sensorEditId").value;
+    const toNum = (id) => { const v = document.getElementById(id).value.trim(); return v === "" ? null : parseFloat(v); };
+    const payload = {
+        deviceId: document.getElementById("sDeviceId").value.trim(),
+        temperature: toNum("sTemperature"),
+        humidity: toNum("sHumidity"),
+        co2: toNum("sCo2"),
+        smoke: toNum("sSmoke"),
+        light: toNum("sLight"),
+        fireType: parseInt(document.getElementById("sFireType").value) || 0,
+        alertLevel: parseInt(document.getElementById("sAlertLevel").value) || 1,
+        dist: toNum("sDist"),
+        confidence: toNum("sConfidence")
+    };
+    if (!payload.deviceId) { alert("请输入设备ID"); return; }
+    if (editId) {
+        await api(`/api/sensors/${editId}`, { method: "PUT", body: JSON.stringify(payload) });
+    } else {
+        await api("/api/sensors", { method: "POST", body: JSON.stringify(payload) });
+    }
+    closeSensorModal();
+    await loadSensors();
+}
+document.getElementById("sensorModalOverlay").addEventListener("click", function(e) { if (e.target === this) closeSensorModal(); });
+
+// ===================== 报警弹窗 =====================
+function openAlarmModal(id) {
+    const overlay = document.getElementById("alarmModalOverlay");
+    const addFields = document.getElementById("alarmAddFields");
+    const handleFields = document.getElementById("alarmHandleFields");
+    const alarm = id ? alarmCache[id] : null;
+
+    if (alarm) {
+        // 处理模式
+        document.getElementById("alarmModalTitle").innerText = "处理报警";
+        document.getElementById("alarmModalSubmitBtn").innerText = "保存处理";
+        document.getElementById("alarmEditId").value = alarm.id;
+        addFields.style.display = "none";
+        handleFields.style.display = "block";
+        document.getElementById("aHandleStatus").value = alarm.handleStatus || "未处理";
+        document.getElementById("aHandleRemark").value = alarm.handleRemark || "";
+    } else {
+        // 新增模式
+        document.getElementById("alarmModalTitle").innerText = "新增报警";
+        document.getElementById("alarmModalSubmitBtn").innerText = "确认新增";
+        document.getElementById("alarmEditId").value = "";
+        addFields.style.display = "block";
+        handleFields.style.display = "none";
+        document.getElementById("aDeviceId").value = "";
+        document.getElementById("aAlarmType").value = "";
+        document.getElementById("aAlarmLevel").value = "1";
+        document.getElementById("aAlarmContent").value = "";
+    }
+    overlay.classList.add("active");
+}
+function closeAlarmModal() { document.getElementById("alarmModalOverlay").classList.remove("active"); }
+async function submitAlarm() {
+    const editId = document.getElementById("alarmEditId").value;
+    if (editId) {
+        await api(`/api/alarms/${editId}`, {
+            method: "PUT",
+            body: JSON.stringify({
+                handleStatus: document.getElementById("aHandleStatus").value,
+                handleRemark: document.getElementById("aHandleRemark").value.trim()
+            })
+        });
+    } else {
+        const payload = {
+            deviceId: document.getElementById("aDeviceId").value.trim(),
+            alarmType: document.getElementById("aAlarmType").value.trim(),
+            alarmLevel: parseInt(document.getElementById("aAlarmLevel").value || "1"),
+            alarmContent: document.getElementById("aAlarmContent").value.trim(),
+            handleStatus: "未处理"
+        };
+        if (!payload.deviceId) { alert("请输入设备ID"); return; }
+        if (!payload.alarmType) { alert("请输入报警类型"); return; }
+        await api("/api/alarms", { method: "POST", body: JSON.stringify(payload) });
+    }
+    closeAlarmModal();
+    await loadAlarms();
+}
+document.getElementById("alarmModalOverlay").addEventListener("click", function(e) { if (e.target === this) closeAlarmModal(); });
+
+// ===================== 设备列表 =====================
+async function loadDevices() {
+    const params = new URLSearchParams();
+    const kw = document.getElementById("devSearch")?.value.trim();
+    const st = document.getElementById("devStatusFilter")?.value;
+    if (kw) params.set("keyword", kw);
+    if (st) params.set("status", st);
+    const qs = params.toString();
+    const list = await api("/api/devices" + (qs ? "?" + qs : ""));
+    list.forEach(d => deviceCache[d.id] = d);
+    document.getElementById("deviceCount").innerText = list.length;
+    document.getElementById("deviceTable").innerHTML = list.map(d => `
+        <tr>
+            <td>${show(d.deviceId)}</td><td>${show(d.deviceName)}</td><td>${show(d.location)}</td>
+            <td><span class="tag">${show(d.status)}</span></td>
+            <td>
+                <button class="primary" onclick="openDeviceModal(${d.id})">修改</button>
+                <button class="danger" onclick="deleteDevice(${d.id})">删除</button>
+            </td>
+        </tr>`).join("");
+}
+async function deleteDevice(id) {
+    if (!confirm("确认删除该设备？")) return;
+    await api(`/api/devices/${id}`, { method: "DELETE" });
+    delete deviceCache[id];
+    await loadDevices();
+}
+
+// ===================== 传感器列表 =====================
+async function loadSensors() {
+    const params = new URLSearchParams();
+    const did = document.getElementById("sensorDevIdSearch")?.value.trim();
+    const lim = document.getElementById("sensorLimit")?.value;
+    if (did) params.set("deviceId", did);
+    if (lim) params.set("limit", lim);
+    const qs = params.toString();
+    const list = await api("/api/sensors" + (qs ? "?" + qs : ""));
+    list.forEach(r => sensorCache[r.id] = r);
+    document.getElementById("sensorCount").innerText = list.length;
+    document.getElementById("sensorTable").innerHTML = list.map(r => `
+        <tr>
+            <td>${show(r.deviceId)}</td><td>${show(r.temperature)}</td>
+            <td>${show(r.humidity)}</td><td>${show(r.co2)}</td><td>${show(r.smoke)}</td>
+            <td>${show(r.light)}</td><td>${show(r.fireType)}</td><td>${show(r.alertLevel)}</td>
+            <td>${show(r.dist)}</td><td>${show(r.reportTime)}</td>
+            <td>
+                <button class="primary" onclick="openSensorModal(${r.id})">修改</button>
+                <button class="danger" onclick="deleteSensor(${r.id})">删除</button>
+            </td>
+        </tr>`).join("");
+}
+async function deleteSensor(id) {
+    if (!confirm("确认删除该条测试数据？")) return;
+    await api(`/api/sensors/${id}`, { method: "DELETE" });
+    delete sensorCache[id];
+    await loadSensors();
+}
+
+// ===================== 报警列表 =====================
+async function loadAlarms() {
+    const params = new URLSearchParams();
+    const did = document.getElementById("alarmDevIdSearch")?.value.trim();
+    const at  = document.getElementById("alarmTypeSearch")?.value.trim();
+    const hs  = document.getElementById("alarmStatusFilter")?.value;
+    if (did) params.set("deviceId", did);
+    if (at) params.set("alarmType", at);
+    if (hs) params.set("handleStatus", hs);
+    const qs = params.toString();
+    const list = await api("/api/alarms" + (qs ? "?" + qs : ""));
+    list.forEach(a => alarmCache[a.id] = a);
+    document.getElementById("alarmCount").innerText = list.length;
+    document.getElementById("alarmTable").innerHTML = list.map(a => `
+        <tr>
+            <td>${show(a.deviceId)}</td><td>${show(a.alarmType)}</td>
+            <td>${show(a.alarmLevel)}</td><td>${show(a.alarmContent)}</td>
+            <td><span class="tag ${a.handleStatus === '未处理' ? 'warn' : ''}">${show(a.handleStatus)}</span></td>
+            <td>${show(a.handleRemark)}</td><td>${show(a.alarmTime)}</td>
+            <td>
+                <button class="primary" onclick="openAlarmModal(${a.id})">处理</button>
+                <button class="danger" onclick="deleteAlarm(${a.id})">删除</button>
+            </td>
+        </tr>`).join("");
+}
+async function deleteAlarm(id) {
+    if (!confirm("确认删除该报警记录？")) return;
+    await api(`/api/alarms/${id}`, { method: "DELETE" });
+    delete alarmCache[id];
+    await loadAlarms();
+}
+
+async function loadAll() { await loadDevices(); await loadSensors(); await loadAlarms(); }
+
+loadAll();
+setInterval(loadSensors, 5000);
+</script>
+</body>
+</html>
