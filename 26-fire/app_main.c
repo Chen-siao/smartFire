@@ -1,5 +1,4 @@
 
-
 #include "lwip/netifapi.h"
 #include "wifi_hotspot.h"
 #include "wifi_hotspot_config.h"
@@ -175,4 +174,3 @@ static void app_main(void)
 }
 
 app_run(app_main);
-
